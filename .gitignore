@@ -1,0 +1,8 @@
+/temp
+/tests
+/venv
+.DS_Store
+.env
+*.csv
+.ipynb_checkpoints
+/.ipynb_checkpoints
