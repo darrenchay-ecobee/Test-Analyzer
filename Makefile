@@ -26,7 +26,7 @@ notebook: setup
 	. $(VENV_DIR)/bin/activate && jupyter notebook $(NOTEBOOK)
 
 download_tests:
-	./download_tests_from_github.sh
+	@source .env && ./download_tests_from_github.sh
 
 clean:
 	rm -rf $(VENV_DIR)

@@ -28,23 +28,40 @@ os.makedirs(DESTINATION_DIR_DATA, exist_ok=True)
 os.chmod(DESTINATION_DIR_ZIPS, 0o777)
 os.chmod(DESTINATION_DIR_DATA, 0o777)
 
+# Function to fetch all workflow runs and handle pagination
+def fetch_runs(url, headers):
+    all_run_ids = []
+    while url:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Filter runs by created_at time range
+        runs = [run['id'] for run in data['workflow_runs']
+                    if START_TIME <= run['created_at'] <= END_TIME 
+                    # and run['head_branch'] == 'main'
+                ]
+        all_run_ids.extend(runs)
+
+        # Check for pagination
+        url = None
+        if 'next' in response.links:
+            url = response.links['next']['url']
+            print("retrieving from", url, "num runs: ", len(all_run_ids))
+
+    return all_run_ids
+
 # Fetch all workflow runs for the specified workflow
 url = f"https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows/{WORKFLOW_ID}/runs"
 headers = {"Authorization": f"token {TOKEN}"}
-response = requests.get(url, headers=headers)
-response.raise_for_status()  # Raise an exception for failed requests
 
 # Extract run IDs from the JSON response, filtering by the time range
-runs = response.json()["workflow_runs"]
-run_ids = [run["id"] for run in runs if START_TIME <= run["created_at"] <= END_TIME]
+run_ids = fetch_runs(url, headers)
 
 # Check if any runs are found in the time range
 if not run_ids:
     print("No runs found in the specified time range.")
     exit(1)
-
-# Retrieving data
-# test_data = []
 
 # Loop through each workflow run
 for run_id in run_ids:
@@ -71,21 +88,21 @@ for run_id in run_ids:
                 f.write(response.content)
 
             # Create a folder for unzipped artifact
-            artifact_dir = os.path.join(DESTINATION_DIR_DATA, artifact_name)
-            os.makedirs(artifact_dir, exist_ok=True)
+            # artifact_dir = os.path.join(DESTINATION_DIR_DATA, artifact_name)
+            # os.makedirs(artifact_dir, exist_ok=True)
 
-            # Ensure the directory is writable
-            os.chmod(artifact_dir, 0o777)
+            # # Ensure the directory is writable
+            # os.chmod(artifact_dir, 0o777)
 
-            # Unzip the artifact
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(artifact_dir)
+            # # Unzip the artifact
+            # with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            #     zip_ref.extractall(artifact_dir)
 
             # Load data to list
             # test_data.append(collect_test_data(report_dir="./temp"))
             
             # Delete the zip and extracted files after unzipping to prevent storage from filling up
-            os.remove(zip_path)
+            # os.remove(zip_path)
             # shutil.rmtree(artifact_dir)
 
 print("All artifacts downloaded and extracted successfully.")
